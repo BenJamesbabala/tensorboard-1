@@ -25,7 +25,7 @@ export let DataPanelPolymer = PolymerElement({
   is: 'vz-projector-data-panel',
   properties: {
     selectedTensor: {type: String, observer: '_selectedTensorChanged'},
-    selectedRun: {type: String, observer: '_selectedRunChanged'},
+    selectedRun: String,
     selectedColorOptionName: {
       type: String,
       notify: true,
@@ -35,7 +35,10 @@ export let DataPanelPolymer = PolymerElement({
         {type: String, notify: true, observer: '_selectedLabelOptionChanged'},
     normalizeData: Boolean,
     showForceCategoricalColorsCheckbox: Boolean
-  }
+  },
+  observers: [
+    '_generateUiForNewCheckpointForRun(selectedRun)',
+  ],
 });
 
 export class DataPanel extends DataPanelPolymer {
@@ -88,7 +91,13 @@ export class DataPanel extends DataPanelPolymer {
       this.runNames = runs;
       // Choose the first run by default.
       if (this.runNames.length > 0) {
+        // Set the selected run in a way that does not trigger the observer. We
+        // do not rely on an observer because the run name string could be the
+        // same despite how the dataset changed.
         this.selectedRun = runs[0];
+
+        // Load the projector config and information relevant to the new run.
+        this._generateUiForNewCheckpointForRun(this.selectedRun);
       }
     });
   }
@@ -225,8 +234,8 @@ export class DataPanel extends DataPanelPolymer {
         this.selectedRun, this.getEmbeddingInfoByName(this.selectedTensor));
   }
 
-  _selectedRunChanged() {
-    this.dataProvider.retrieveProjectorConfig(this.selectedRun, info => {
+  _generateUiForNewCheckpointForRun(selectedRun) {
+    this.dataProvider.retrieveProjectorConfig(selectedRun, info => {
       this.projectorConfig = info;
       let names =
           this.projectorConfig.embeddings.map(e => e.tensorName)
